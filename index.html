@@ -85841,7 +85841,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
     b.addEventListener("click", fn);
     return b;
   };
-  function mountPlacementPanel(host, { onAddText = null, player, getPlacements, setPlacements, movements, onAdd, onSelect, selected, marks = () => [], session = {}, onSoundOffset = () => {
+  function mountPlacementPanel(host, { onAddText = null, onAddImage = null, player, getPlacements, setPlacements, movements, onAdd, onSelect, selected, marks = () => [], session = {}, onSoundOffset = () => {
   }, label = (k2) => k2 }) {
     const root = el31("div", "border:1px solid var(--line,#d8d3c8);border-radius:10px;background:var(--module,#fcfbf8);padding:6px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px", { "data-placement-panel": "" });
     host.append(root);
