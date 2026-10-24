@@ -39362,11 +39362,11 @@ input[type=range]:focus-visible { outline: 2px solid #2b6cff; outline-offset: 3p
     }
     return out;
   }
-  function createScoreView({ id, doc, glyphs, movement, width = 40, staffSpace = 14, margin = 10, canvasWidth, getStyle, resolve, justifyLast = false }) {
+  function createScoreView({ id, doc, glyphs, movement, width = 40, bandWidth = null, staffSpace = 14, margin = 10, canvasWidth, getStyle, resolve, justifyLast = false }) {
     if (!id) throw new Error("ScoreView : identifiant de vue obligatoire (donn\xE9 par l'Application)");
     const selection = createSelection();
     const changeListeners = /* @__PURE__ */ new Set();
-    const params = { width, staffSpace, margin, canvasWidth, getStyle, justifyLast };
+    const params = { width, bandWidth, staffSpace, margin, canvasWidth, getStyle, justifyLast };
     const listDescriptor = (le) => le ? { id: le.id, type: le.kind, listEntry: true, owner: le.owner, pid: le.pid, entry: le.entry } : void 0;
     const decorDescriptor = (ref) => {
       const d = parseDecorId(ref);
@@ -49997,7 +49997,20 @@ input[type=range]:focus-visible { outline: 2px solid #2b6cff; outline-offset: 3p
       closeEditor(false);
       refresh();
     });
-    return { refresh, select: (id) => {
+    const blockAt = (x, y2) => {
+      const band = view.bandRect();
+      if (!band) return null;
+      let found = null;
+      for (const b of app.blocks()) {
+        const bx = band.x + b.x / 100 * band.w;
+        const by = band.y + b.y / 100 * band.w;
+        const bw = b.w / 100 * band.w;
+        const bh = b.h / 100 * band.w;
+        if (x >= bx - 3 && x <= bx + bw + 3 && y2 >= by - 3 && y2 <= by + bh + 3) found = b.id;
+      }
+      return found;
+    };
+    return { refresh, blockAt, select: (id) => {
       selected = id;
       refresh();
     }, destroy() {
@@ -56267,6 +56280,14 @@ input[type=range]:focus-visible { outline: 2px solid #2b6cff; outline-offset: 3p
           view.select([hit.ref]);
           drawCells();
           drawBar();
+          return;
+        }
+      }
+      if (!hit && app && blocksEditor && !app.blocksEditing()) {
+        const bid = blocksEditor.blockAt(x, y2);
+        if (bid) {
+          app.setBlocksEditing(true);
+          blocksEditor.select(bid);
           return;
         }
       }
