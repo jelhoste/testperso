@@ -44,6 +44,7 @@ input[type=range]::-moz-range-track { background: #c9c4b8; border-radius: 2px; h
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5.5px; border-radius: 50%; background: #5a5750; border: 0; }
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #5a5750; border: 0; }
 input[type=range]:focus-visible { outline: 2px solid #2b6cff; outline-offset: 3px; border-radius: 4px; }
+html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-float"], html[data-yt] [data-action="percmap-float"] { display: none !important; }
 </style>
 </head>
 <body>
@@ -89076,10 +89077,12 @@ if (typeof exports === 'object' && typeof module === 'object') {
     for (const [k2, v3] of Object.entries(attrs)) e.setAttribute(k2, v3);
     return e;
   };
-  var BASE = "border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;min-height:var(--ui-target,30px);padding:0 10px;font:inherit;font-size:14px;cursor:pointer;color:#111";
+  var BASE = "border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;min-height:var(--ui-target,30px);padding:0 10px;font:14px sans-serif;cursor:pointer;color:#111;display:inline-grid;justify-items:center";
   function paintUnderlineTab(b, active) {
     b.style.borderBottomColor = active ? "#1c1b1a" : "transparent";
     b.style.fontWeight = active ? "700" : "400";
+    const shown2 = b.firstChild;
+    if (shown2?.style) shown2.style.fontWeight = active ? "700" : "400";
   }
   function createUnderlineTabs(items, { kind = "tab", onPick = () => {
   }, selected = null, css = "" } = {}) {
@@ -89095,7 +89098,11 @@ if (typeof exports === 'object' && typeof module === 'object') {
     };
     for (const it of items) {
       const b = el36("button", BASE, { type: "button", ...kind === "tab" ? { role: "tab" } : {}, ...it.title ? { title: it.title, "aria-label": it.title } : {}, ...it.attrs ?? {} });
-      b.textContent = it.text;
+      const shown2 = el36("span", "grid-area:1/1");
+      shown2.textContent = it.text;
+      const ghost = el36("span", "grid-area:1/1;font-weight:700;visibility:hidden;height:0;overflow:hidden", { "aria-hidden": "true" });
+      ghost.textContent = it.text;
+      b.append(shown2, ghost);
       b.addEventListener("click", () => {
         onPick(it.id);
       });
@@ -90467,6 +90474,11 @@ if (typeof exports === 'object' && typeof module === 'object') {
       const four = isFour() && !!syncSession && (screen !== "yt" || syncSession.mode === "placements") && app5 && current2 !== "legend";
       $("sync-host").style.display = four ? "" : "none";
       queueMicrotask(updateSyncWarning);
+      document.documentElement.toggleAttribute("data-yt", screen === "yt");
+      if (four && screen === "yt" && syncSession.layout) {
+        syncSession.layout.adoptWorkRow();
+        sidebar.setHidden(true);
+      }
       if (syncSession?.layout && screen !== "yt") {
         syncSession.layout.restoreWorkRow();
         sidebar.setHidden(false);
@@ -91129,7 +91141,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       const at2 = map.locate(st.position);
       const mb2 = v3.movement().masterbars[at2.measure];
       const position = fMul(measureLengthOf(mb2), frac(Math.round(at2.ratio * 1920), 1920));
-      mounted?.setCursor(v3.playCursor({ movement: v3.movementIndex(), measure: at2.measure, position }), { follow: st.playing });
+      mounted?.setCursor(v3.playCursor({ movement: v3.movementIndex(), measure: at2.measure, position }), { follow: st.playing && screen !== "yt" });
     };
     const mountSyncSession = () => {
       const ss = syncSession;
@@ -91246,7 +91258,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       const at2 = map.locate(st.position);
       const mb2 = v3.movement().masterbars[at2.measure];
       const position = fMul(measureLengthOf(mb2), frac(Math.round(at2.ratio * 1920), 1920));
-      mounted?.setCursor(v3.playCursor({ movement: index, measure: at2.measure, position }), { follow: st.playing });
+      mounted?.setCursor(v3.playCursor({ movement: index, measure: at2.measure, position }), { follow: st.playing && screen !== "yt" });
     };
     const slavePlacements = (ss) => {
       const ahead = () => engine.options?.startLatency ?? 0.05;
