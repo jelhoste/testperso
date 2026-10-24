@@ -44,6 +44,7 @@ input[type=range]::-moz-range-track { background: #c9c4b8; border-radius: 2px; h
 input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5.5px; border-radius: 50%; background: #5a5750; border: 0; }
 input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #5a5750; border: 0; }
 input[type=range]:focus-visible { outline: 2px solid #2b6cff; outline-offset: 3px; border-radius: 4px; }
+html[data-yt] #score-host { min-height: 0 !important; }
 html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-float"], html[data-yt] [data-action="percmap-float"] { display: none !important; }
 </style>
 </head>
@@ -87483,6 +87484,12 @@ if (typeof exports === 'object' && typeof module === 'object') {
         setList(next);
       });
     }
+    if (layout) {
+      editLabel.style.flex = "1 1 100%";
+      editLabel.style.minWidth = "0";
+      editLabel.style.margin = "0 0 2px 2px";
+      editLabel.style.font = "700 13px sans-serif";
+    }
     edit.append(
       editLabel,
       textBtn("\u25C2", label("placement.startEarlier"), () => nudge("start", -STEP3)),
@@ -87534,10 +87541,10 @@ if (typeof exports === 'object' && typeof module === 'object') {
       return b;
     };
     const stepper = (name, read, change, reset) => {
-      const wrap2 = el33("span", "display:inline-flex;align-items:center;gap:var(--btn-gap,2px);margin-right:8px");
+      const wrap2 = el33("span", `display:inline-flex;align-items:center;gap:var(--btn-gap,2px);margin-right:${layout ? 6 : 8}px`);
       const lab = el33("span", "font:12px sans-serif;margin-right:2px");
       lab.textContent = name;
-      const val = el33("span", "font:12px sans-serif;min-width:76px;text-align:center");
+      const val = el33("span", layout ? "font:12px sans-serif;min-width:0;padding:0 3px;text-align:center;white-space:nowrap" : "font:12px sans-serif;min-width:76px;text-align:center");
       wrap2.append(lab, small("\u2212", name, () => change(-1)), val, small("+", name, () => change(1)), ...reset ? [small("\u21BA", label("placement.auto"), reset)] : []);
       return { wrap: wrap2, update: () => {
         val.textContent = read();
@@ -87798,8 +87805,8 @@ if (typeof exports === 'object' && typeof module === 'object') {
     if (layout) {
       const hint = el33("div", "font:13px sans-serif;color:#777;padding:6px 2px", { "data-yt-selection-hint": "" });
       hint.textContent = label("ytEditor.selectHint");
-      const timelineTop = el33("div", "display:flex;flex-direction:column;gap:6px");
-      timelineTop.append(row1, message);
+      row1.append(message);
+      const timelineTop = row1;
       root.append(timelineTop, canvas, zoomRow);
       layout.selection.append(hint, edit, showRow, overRow, itemBar);
       layout.settings.append(addRow, bannerRow, globRow);
@@ -89359,11 +89366,20 @@ if (typeof exports === 'object' && typeof module === 'object') {
     const left = el38("div", "min-width:0");
     const right = el38("div", "min-width:0;display:flex;flex-direction:column;gap:6px");
     const viewerHost = el38("div");
-    const timelineHost = el38("div", "margin:0 auto");
+    const timelineHost = el38("div", "position:fixed;left:0;right:0;bottom:var(--dock-h,0px);z-index:50;box-sizing:border-box;padding:4px 12px 6px;background:var(--paper,#faf8f4);border-top:1px solid var(--line,#d8d3c8);box-shadow:0 -2px 8px rgba(0,0,0,.08)", { "data-yt-timeline-band": "" });
     const editHost = el38("div", "margin-top:8px");
     const vbar = el38("div", "height:8px;margin:2px 0 4px;cursor:row-resize;border-radius:4px;background:var(--line,#d8d3c8);touch-action:none", { "data-yt-vsplit": "", title: label("ytEditor.heightHint") });
     const bar = el38("div", "flex:none;width:8px;margin:0 3px;cursor:col-resize;border-radius:4px;background:var(--line,#d8d3c8);touch-action:none", { "data-yt-split": "", title: label("ytEditor.splitHint") });
-    left.append(viewerHost, vbar, timelineHost, editHost);
+    left.append(viewerHost, vbar, editHost);
+    document.body.append(timelineHost);
+    const spacer = el38("div");
+    left.append(spacer);
+    const fitSpacer = () => {
+      spacer.style.height = `${timelineHost.offsetHeight + 8}px`;
+    };
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(fitSpacer) : null;
+    ro?.observe(timelineHost);
+    fitSpacer();
     const bodies = { fragments: el38("div", "display:flex;flex-direction:column;gap:6px"), editor: el38("div", "display:flex;flex-direction:column;gap:6px"), settings: el38("div") };
     let tab = "fragments";
     const tabs = createUnderlineTabs(
@@ -89435,9 +89451,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       current: () => tab,
       videoHeight: () => videoH,
       /** The timeline is as wide as the preview of the video. */
-      setTimelineWidth(px) {
-        timelineHost.style.width = px > 0 ? `${px}px` : "";
-        timelineHost.style.maxWidth = "100%";
+      setTimelineWidth() {
       },
       /** The score canvas of screen 1 lives under the timeline while this screen is shown. */
       adoptWorkRow() {
@@ -89454,6 +89468,9 @@ if (typeof exports === 'object' && typeof module === 'object') {
       },
       destroy() {
         wide.removeEventListener("change", apply2);
+        ro?.disconnect();
+        timelineHost.remove();
+        spacer.remove();
       }
     };
   }
@@ -89681,7 +89698,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       } else {
         body.append(section("identity", label("ytEditor.secIdentity"), el40("div")), section("display", label("ytEditor.secDisplay"), displayHost), section("tracks", label("ytEditor.secTracks"), el40("div")), section("actions", label("ytEditor.secActions"), el40("div")));
       }
-      root.replaceChildren(hint, body);
+      root.replaceChildren(...m ? [] : [hint], body);
     }
     draw(true);
     return { refresh: () => draw(false), redraw: () => draw(true), destroy() {
@@ -90475,6 +90492,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       $("sync-host").style.display = four ? "" : "none";
       queueMicrotask(updateSyncWarning);
       document.documentElement.toggleAttribute("data-yt", screen === "yt");
+      if (syncSession?.layout) syncSession.layout.timelineHost.style.display = four && screen === "yt" ? "" : "none";
       if (four && screen === "yt" && syncSession.layout) {
         syncSession.layout.adoptWorkRow();
         sidebar.setHidden(true);
