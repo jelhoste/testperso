@@ -86376,11 +86376,6 @@ if (typeof exports === 'object' && typeof module === 'object') {
     const s = Math.max(lo, Math.min(start2, hi - len));
     return list.map((p) => p.id === id ? { ...p, start: s, end: s + len } : p);
   }
-  function setPlacementRow(list, id, row) {
-    const me = list.find((p) => p.id === id);
-    if (!me) return list;
-    return setPlacementLane(list, id, groupOf(me) * 2 + (row === 1 ? 1 : 0));
-  }
   function setPlacementLane(list, id, lane) {
     const me = list.find((p) => p.id === id);
     if (!me || !(lane >= 0 && lane < LANES) || laneOf2(me) === lane) return list;
@@ -86754,7 +86749,18 @@ if (typeof exports === 'object' && typeof module === 'object') {
   // src/ui/placement-panel.js
   var fmt3 = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, "0")}`;
   var COLORS3 = ["#cfe0f5", "#f5d9d4", "#d8ecd3", "#efe3c2", "#e0d6ef", "#d3ecec"];
-  var EDGE = 8;
+  var EDGE = 10;
+  function drawGrip(g, x, top, h2) {
+    const w = 7;
+    const hh = Math.max(10, h2 - 8);
+    g.fillStyle = "#fff";
+    g.strokeStyle = "#2b6cff";
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.roundRect(x - w / 2, top + (h2 - hh) / 2, w, hh, 3);
+    g.fill();
+    g.stroke();
+  }
   var snap2 = (t) => Math.round(t * 20) / 20;
   var STEP3 = 0.05;
   var fmt32 = (v3) => `${Math.floor(v3 / 60)}:${(v3 % 60).toFixed(3).padStart(6, "0")}`;
@@ -86793,7 +86799,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
     host.append(root);
     const top = el31("div", "display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start");
     const frame = el31("div", "width:min(100%,360px);aspect-ratio:16/9;background:#111;border-radius:8px;overflow:hidden;flex:none", { "data-placement-video": "" });
-    const layer = el31("div", "position:absolute;inset:0;pointer-events:none;overflow:hidden", { "data-placement-layer": "" });
+    const layer = el31("div", "position:absolute;inset:0;pointer-events:auto;touch-action:none;overflow:hidden", { "data-placement-layer": "" });
     frame.style.position = "relative";
     frame.append(layer);
     const side = el31("div", "display:flex;flex-direction:column;gap:6px;flex:1 1 260px;min-width:240px");
@@ -86851,6 +86857,10 @@ if (typeof exports === 'object' && typeof module === 'object') {
       overlay = mountOverlay({ layer, frame });
       layer.addEventListener("click", stopClick, true);
       const beginDrag = (e, p, mode2) => {
+        try {
+          e.target.setPointerCapture?.(e.pointerId);
+        } catch {
+        }
         onSelect(p);
         const o = overOf(p);
         const r = frame.getBoundingClientRect();
@@ -87104,17 +87114,6 @@ if (typeof exports === 'object' && typeof module === 'object') {
         return n;
       }));
     };
-    const rowBtn = small("", label("placement.rowToggle"), () => {
-      const p = current2();
-      if (!p) return;
-      const next = setPlacementRow(getPlacements(), p.id, rowOf2(p) === 0 ? 1 : 0);
-      if (next === getPlacements()) {
-        message.textContent = label("placement.noRoomRow");
-        return;
-      }
-      message.textContent = "";
-      setList(next);
-    });
     const defTxt = (v3) => `${label("placement.default")} (${v3} s)`;
     const leadS = stepper(label("placement.lead"), () => {
       const p = current2();
@@ -87145,20 +87144,6 @@ if (typeof exports === 'object' && typeof module === 'object') {
       if (p) patchPlacement({ fadeOut: Math.max(0, Math.min(5, round1(fadeOutOf(p, disp()) + d * 0.1))) });
     }, () => patchPlacement({ fadeOut: null }));
     const showRow = el31("div", "display:none;flex-wrap:wrap;align-items:center;gap:var(--btn-gap,2px)", { "data-placement-show": "" });
-    const overBtn = small("", label("placement.overHint"), () => {
-      const p = current2();
-      if (!p) return;
-      const base = isOver(p) ? 0 : 2;
-      let next = setPlacementLane(getPlacements(), p.id, base + rowOf2(p));
-      if (next === getPlacements()) next = setPlacementLane(getPlacements(), p.id, base + (rowOf2(p) === 0 ? 1 : 0));
-      if (next === getPlacements()) {
-        message.textContent = label("placement.noRoom");
-        return;
-      }
-      message.textContent = "";
-      setList(next);
-    });
-    overBtn.setAttribute("data-placement-over", "");
     const overVal = (key3) => {
       const p = current2();
       return p ? overOf(p)[key3] : 0;
@@ -87178,7 +87163,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
     const overRow = el31("div", "display:none;flex-wrap:wrap;align-items:center;gap:var(--btn-gap,2px)", { "data-placement-over-row": "" });
     const ovReset = small("\u21BA", label("placement.overReset"), () => patchOver({ x: OVER_DEFAULTS.x, y: OVER_DEFAULTS.y, w: OVER_DEFAULTS.w }));
     overRow.append(ovX.wrap, ovY.wrap, ovW.wrap, ovO.wrap, ovS.wrap, ovColor, ovReset);
-    showRow.append(overBtn, rowBtn, leadS.wrap, tailS.wrap, fadeInS.wrap, fadeOutS.wrap);
+    showRow.append(leadS.wrap, tailS.wrap, fadeInS.wrap, fadeOutS.wrap);
     const blocksBtn = textBtn("", label("placement.blocksHint"), () => setDisp({ showBlocks: !disp().showBlocks }));
     blocksBtn.setAttribute("data-placement-blocks", "");
     blocksBtn.style.cssText += ";display:inline-flex;align-items:center;gap:4px";
@@ -87640,6 +87625,10 @@ if (typeof exports === 'object' && typeof module === 'object') {
         g.strokeStyle = sel ? "#2b6cff" : "#8a857a";
         g.lineWidth = sel ? 2 : 1;
         g.strokeRect(x + 0.5, top2 + 0.5, wd - 1, bh - 1);
+        if (sel) {
+          drawGrip(g, x, top2, bh);
+          drawGrip(g, x + wd, top2, bh);
+        }
         if (wd >= 60) {
           g.strokeStyle = "rgba(0,0,0,.25)";
           g.lineWidth = 1;
@@ -87698,6 +87687,10 @@ if (typeof exports === 'object' && typeof module === 'object') {
         g.strokeStyle = sel ? "#2b6cff" : st2.border;
         g.lineWidth = sel ? 2 : Math.min(2, Math.max(0.5, st2.borderWidth));
         g.strokeRect(x + 0.5, top2 + 0.5, wd - 1, LANE_H - 1);
+        if (sel) {
+          drawGrip(g, x, top2, LANE_H);
+          drawGrip(g, x + wd, top2, LANE_H);
+        }
         g.fillStyle = st2.ink;
         g.font = `${st2.italic ? "italic " : ""}${st2.bold ? "700 " : ""}11px sans-serif`;
         g.save();
@@ -87735,21 +87728,15 @@ if (typeof exports === 'object' && typeof module === 'object') {
       if (p) selItem = null;
       showRow.style.display = p ? "flex" : "none";
       overRow.style.display = p && isOver(p) ? "flex" : "none";
-      if (p) {
-        overBtn.textContent = isOver(p) ? `\u25AD ${label("placement.overOn")}` : `\u25AD ${label("placement.overOff")}`;
-        overBtn.setAttribute("aria-pressed", String(isOver(p)));
-        overBtn.style.background = isOver(p) ? "var(--btn-on,#e2e0da)" : "";
-        if (isOver(p)) {
-          ovX.update();
-          ovY.update();
-          ovW.update();
-          ovO.update();
-          ovS.update();
-          ovColor.value = overOf(p).color;
-        }
+      if (p && isOver(p)) {
+        ovX.update();
+        ovY.update();
+        ovW.update();
+        ovO.update();
+        ovS.update();
+        ovColor.value = overOf(p).color;
       }
       if (p) {
-        rowBtn.textContent = rowOf2(p) === 0 ? `\u2193 ${label("placement.rowBottom")}` : `\u2191 ${label("placement.rowTop")}`;
         leadS.update();
         tailS.update();
         fadeInS.update();
@@ -89920,7 +89907,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
       inner.style.cssText = "width:100%;height:100%";
       ss.panel.frame.append(inner);
       const done = busy(t("youtube.loading"));
-      ss.player.load(ss.session.videoId, inner).then(() => {
+      ss.player.load(ss.session.videoId, inner, { nativeControls: false }).then(() => {
         if (!ss.placements.length) {
           const first2 = movements()[0];
           if (first2) {
