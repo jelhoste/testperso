@@ -52080,7 +52080,24 @@ html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-fl
       }
     };
     let railPref = readRail();
-    const railOn = () => !!dock && dock.inHeader() && railPref !== "bottom";
+    const ytOn = () => !!dock && dock.inHeader() && document.documentElement.hasAttribute("data-yt") && st.active;
+    const ytHost = document.createElement("div");
+    ytHost.setAttribute("data-entry-yt", "");
+    ytHost.setAttribute("data-dismiss-keep", "");
+    ytHost.style.display = "none";
+    if (dock) document.body.append(ytHost);
+    const placeYt = () => {
+      const band = document.querySelector("[data-yt-timeline-band]");
+      const col = document.getElementById("sync-host")?.firstElementChild?.firstElementChild;
+      if (!band || !col) {
+        ytHost.style.display = "none";
+        return;
+      }
+      const b = band.getBoundingClientRect();
+      const c = col.getBoundingClientRect();
+      ytHost.style.cssText = `display:block;position:fixed;z-index:55;left:${Math.round(c.left)}px;width:${Math.round(c.width)}px;bottom:${Math.round(window.innerHeight - b.top + 4)}px;box-sizing:border-box;padding:4px;background:var(--paper,#faf8f4);border:1px solid var(--line,#d8d3c8);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.12)`;
+    };
+    const railOn = () => !!dock && dock.inHeader() && railPref !== "bottom" && !ytOn();
     const railBtn = btn2(label("noteEntry.railSide"), () => {
       railPref = railPref === "left" ? "right" : railPref === "right" ? "bottom" : "left";
       try {
@@ -52095,6 +52112,14 @@ html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-fl
     rail.setAttribute("data-dismiss-keep", "");
     if (dock) (document.getElementById("work-row") ?? document.body).append(rail);
     const placeRail = () => {
+      if (ytOn()) {
+        rail.style.display = "none";
+        placeYt();
+        if (bar.parentNode !== ytHost) ytHost.append(bar);
+        if (entryRailAttr(true)) dock.refresh?.();
+        return;
+      }
+      ytHost.style.display = "none";
       const on = railOn() && st.active;
       if (!on) {
         rail.style.display = "none";
@@ -52225,8 +52250,10 @@ html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-fl
       voiceRow.style.flexDirection = "";
       row.style.flexDirection = "";
       row.style.alignItems = "center";
+      row.style.justifyContent = ytOn() ? "flex-end" : "";
       if (status.style.position === "fixed") status.style.cssText = status.textContent ? "display:block;font:14px sans-serif;padding:0 4px 4px" : "display:none;font:14px sans-serif;padding:0 4px 4px";
       if (dock && bar.parentNode === rail) dock.entryHost.append(bar);
+      if (dock && !ytOn() && bar.parentNode === ytHost) dock.entryHost.append(bar);
       const avail = bar.clientWidth - (dock ? 0 : 16);
       if (avail <= 0) return;
       const list = items.filter((it) => it.show ? it.show() : true);
@@ -52363,6 +52390,7 @@ html[data-yt] [data-action="piano-toggle"], html[data-yt] [data-action="mixer-fl
       },
       destroy() {
         rail.remove();
+        ytHost.remove();
         off();
         offDockMode?.();
         offFitter?.();
